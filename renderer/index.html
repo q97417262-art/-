@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <title>Playerok Bot</title>
+  <link rel="stylesheet" href="styles.css?v=3" />
+</head>
+<body>
+  <!-- Баннер предпросмотра (виден, только если открыто не через Electron) -->
+  <div class="demo-banner hidden" id="demo-banner">
+    ⚠️ Это предпросмотр интерфейса. Чтобы приложение заработало, открой его через <b>npm start</b>
+  </div>
+  <script>
+    // Если скрипт упал — показываем ошибку на экране, а не молчим
+    window.addEventListener('error', function (e) {
+      var b = document.getElementById('demo-banner');
+      if (b) {
+        b.classList.remove('hidden');
+        b.textContent = '⚠️ Ошибка скрипта: ' + (e.message || 'неизвестная');
+      }
+    });
+  </script>
+
+  <!-- Кастомный тайтлбар -->
+  <header class="titlebar">
+    <div class="titlebar-drag">
+      <span class="titlebar-logo">⚡</span>
+      <span class="titlebar-title">Playerok Bot</span>
+    </div>
+    <div class="titlebar-buttons">
+      <button class="tb-btn" id="btn-min" aria-label="Свернуть">—</button>
+      <button class="tb-btn" id="btn-max" aria-label="Развернуть">▢</button>
+      <button class="tb-btn tb-close" id="btn-close" aria-label="Закрыть">✕</button>
+    </div>
+  </header>
+
+  <div class="app">
+    <!-- Боковая панель -->
+    <nav class="sidebar">
+      <button class="nav-item active" data-view="orders">
+        <span class="nav-icon">🛒</span> Заказы
+        <span class="nav-badge hidden" id="nav-badge"></span>
+      </button>
+      <button class="nav-item" data-view="pets">
+        <span class="nav-icon">🐾</span> Автовыдача
+      </button>
+      <button class="nav-item" data-view="settings">
+        <span class="nav-icon">⚙️</span> Настройки
+      </button>
+
+      <div class="sidebar-spacer"></div>
+
+      <div class="profile-chip hidden" id="profile-chip">
+        <div class="profile-avatar" id="profile-avatar">?</div>
+        <div class="profile-info">
+          <div class="profile-name" id="profile-name">—</div>
+          <div class="profile-status"><span class="dot dot-off" id="status-dot"></span><span id="status-text">Оффлайн</span></div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Основная область -->
+    <main class="main">
+      <!-- ═══ ЗАКАЗЫ ═══ -->
+      <section class="view active" id="view-orders">
+        <div class="view-header">
+          <div>
+            <h1>Заказы</h1>
+            <p class="subtitle" id="orders-subtitle">Мониторинг не запущен</p>
+          </div>
+          <button class="btn btn-primary" id="btn-toggle-monitor">▶ Запустить</button>
+        </div>
+
+        <div class="orders-list" id="orders-list"></div>
+
+        <div class="empty-state" id="empty-state">
+          <div class="empty-ring"></div>
+          <div class="empty-title">Пока пусто</div>
+          <div class="empty-text">Запусти мониторинг — новые оплаченные заказы появятся здесь</div>
+        </div>
+      </section>
+
+      <!-- ═══ АВТОВЫДАЧА ═══ -->
+      <section class="view" id="view-pets">
+        <div class="view-header">
+          <div>
+            <h1>Автовыдача Adopt Me</h1>
+            <p class="subtitle" id="helper-status">Помощник не запущен</p>
+          </div>
+          <div class="row">
+            <button class="btn btn-ghost" id="btn-check-helper">🔍 Проверить</button>
+            <button class="btn btn-danger-ghost" id="btn-stop-delivery">⛔ Стоп</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Режим</div>
+          <label class="switch-row"><input type="checkbox" id="opt-auto" /> <span>Выдавать новые оплаченные заказы автоматически</span></label>
+          <label class="switch-row"><input type="checkbox" id="opt-nick" checked /> <span>Сверять ник в трейде с покупателем (защита от скама)</span></label>
+          <p class="card-note">Перед запуском: Adopt Me открыт и ты стоишь в игре. Экран и мышь в это время лучше не трогать.
+            <b>Аварийная остановка</b>: резко уведи мышь в левый верхний угол экрана.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Питомцы на продажу</div>
+          <div class="pets-grid" id="pets-grid"></div>
+
+          <div class="pet-form" id="pet-form">
+            <div class="pet-img-drop" id="pet-img" title="Картинка питомца">＋<small>картинка</small></div>
+            <div class="pet-fields">
+              <input class="input" id="pet-name" placeholder="Название (например Chameleon)" />
+              <input class="input" id="pet-search" placeholder="Что вводить в поиск рюкзака (обычно название)" />
+              <input class="input" id="pet-match" placeholder="Слова из названия товара на Playerok, через запятую" />
+              <div class="row">
+                <label class="count-label">Штук за заказ <input class="input input-num" id="pet-count" type="number" min="1" max="9" value="1" /></label>
+                <button class="btn btn-ghost btn-sm" id="btn-pet-paste">📋 Вставить картинку</button>
+                <button class="btn btn-ghost btn-sm" id="btn-pet-file">📁 Файл</button>
+                <button class="btn btn-primary btn-sm" id="btn-pet-save">Сохранить</button>
+                <button class="btn btn-ghost btn-sm hidden" id="btn-pet-cancel">Отмена</button>
+              </div>
+            </div>
+          </div>
+          <p class="card-note">Картинка: открой рюкзак в игре, нажми <b>Win+Shift+S</b>, выдели ячейку с питомцем и нажми «Вставить картинку».
+            Снимай в том же окне и разрешении, в котором играешь. Для Neon, Mega и FR лучше отдельная запись.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Тест без заказа</div>
+          <div class="row">
+            <input class="input" id="test-nick" placeholder="Ник друга в Roblox" />
+            <select class="input" id="test-pet"></select>
+            <button class="btn btn-primary btn-sm" id="btn-test">▶ Тест выдачи</button>
+          </div>
+          <p class="card-note">Попроси друга кинуть тебе трейд. Бот проверит ник, положит питомца и подтвердит трейд.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Очередь и журнал</div>
+          <div class="queue" id="queue"></div>
+          <pre class="log" id="delivery-log"></pre>
+        </div>
+      </section>
+
+      <!-- ═══ НАСТРОЙКИ ═══ -->
+      <section class="view" id="view-settings">
+        <div class="view-header">
+          <div>
+            <h1>Настройки</h1>
+            <p class="subtitle">Аккаунт, внешний вид и мониторинг</p>
+          </div>
+        </div>
+
+        <!-- Аккаунт -->
+        <div class="card">
+          <div class="card-title">Аккаунт Playerok</div>
+          <div class="auth-status" id="auth-status">
+            <span class="dot dot-off" id="auth-dot"></span>
+            <span id="auth-text">Вход не выполнен</span>
+          </div>
+
+          <div class="auth-buttons">
+            <button class="btn btn-primary" id="btn-login-window">
+              <span class="btn-icon">🔑</span> Войти через окно
+              <span class="btn-hint">откроется сайт — войди как обычно</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Тема -->
+        <div class="card">
+          <div class="card-title">Тема интерфейса</div>
+          <div class="theme-grid" id="theme-grid"></div>
+        </div>
+
+        <!-- Мониторинг -->
+        <div class="card">
+          <div class="card-title">Интервал проверки заказов</div>
+          <div class="segmented" id="interval-segmented">
+            <button data-interval="15">15 сек</button>
+            <button data-interval="30" class="active">30 сек</button>
+            <button data-interval="60">60 сек</button>
+          </div>
+          <p class="card-note">Не рекомендуется чаще 15 секунд — Playerok может временно ограничить запросы.</p>
+        </div>
+
+        <button class="btn btn-danger-ghost" id="btn-logout">Выйти из аккаунта</button>
+      </section>
+    </main>
+  </div>
+
+  <!-- Уведомления -->
+  <div class="toasts" id="toasts"></div>
+
+  <script src="app.js"></script>
+  <!-- Скорость анимаций (кольцо загрузки + облако свечения) настраивается в anim.js -->
+  <script src="anim.js?v=3"></script>
+</body>
+</html>

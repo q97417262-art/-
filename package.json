@@ -1,0 +1,14 @@
+{
+  "name": "playerok-desktop",
+  "version": "1.0.0",
+  "description": "⚡ Десктопное приложение для мониторинга и автовыдачи заказов Playerok",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "chcp 65001>nul && electron .",
+    "start:plain": "electron ."
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^37.0.0"
+  }
+}
